@@ -9,7 +9,17 @@ const router = express.Router();
 // Configure multer to save directly to frontend public/images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const frontImagesDir = path.join(process.cwd(), "..", "front", "public", "images");
+    // Try production path first, then dev path
+    let frontImagesDir;
+    const prodPath = "/var/www/dislion/frontend/public/images";
+    const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
+    
+    if (fs.existsSync("/var/www/dislion/frontend")) {
+      frontImagesDir = prodPath; // Production
+    } else {
+      frontImagesDir = devPath; // Development
+    }
+    
     // Create directory if it doesn't exist
     fs.mkdirSync(frontImagesDir, { recursive: true });
     cb(null, frontImagesDir);
@@ -41,7 +51,14 @@ router.post("/", auth(), upload.single("image"), (req, res) => {
       return res.status(400).json({ error: "No se proporcionó ningún archivo" });
     }
     
-    const frontImagesDir = path.join(process.cwd(), "..", "front", "public", "images");
+    // Determine the correct images directory
+    let frontImagesDir;
+    if (fs.existsSync("/var/www/dislion/frontend")) {
+      frontImagesDir = "/var/www/dislion/frontend/public/images"; // Production
+    } else {
+      frontImagesDir = path.join(process.cwd(), "..", "frontend", "public", "images"); // Development
+    }
+    
     const tempPath = path.join(frontImagesDir, req.file.filename);
     
     // Get the desired filename from request body
