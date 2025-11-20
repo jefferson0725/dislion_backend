@@ -11,10 +11,10 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Try production path first, then dev path
     let frontImagesDir;
-    const prodPath = "/var/www/dislion/frontend/public/images";
+    const prodPath = "/var/www/dislion/front/public/images";
     const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
     
-    if (fs.existsSync("/var/www/dislion/frontend")) {
+    if (fs.existsSync("/var/www/dislion/front")) {
       frontImagesDir = prodPath; // Production
     } else {
       frontImagesDir = devPath; // Development
@@ -53,8 +53,8 @@ router.post("/", auth(), upload.single("image"), (req, res) => {
     
     // Determine the correct images directory
     let frontImagesDir;
-    if (fs.existsSync("/var/www/dislion/frontend")) {
-      frontImagesDir = "/var/www/dislion/frontend/public/images"; // Production
+    if (fs.existsSync("/var/www/dislion/front")) {
+      frontImagesDir = "/var/www/dislion/front/public/images"; // Production
     } else {
       frontImagesDir = path.join(process.cwd(), "..", "frontend", "public", "images"); // Development
     }
