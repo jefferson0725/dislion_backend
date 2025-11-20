@@ -18,13 +18,20 @@ function getFrontendDistPath() {
   ];
   
   for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
+    try {
+      if (fs.existsSync(p)) {
+        console.log(`[Export] Using frontend path: ${p}`);
+        return p;
+      }
+    } catch (e) {
+      console.log(`[Export] Path check failed for ${p}:`, e.message);
     }
   }
   
   // Fallback to relative path
-  return path.join(process.cwd(), "..", "frontend", "dist");
+  const fallback = path.join(process.cwd(), "..", "frontend", "dist");
+  console.log(`[Export] Using fallback path: ${fallback}`);
+  return fallback;
 }
 
 // Export all data to JSON file in frontend
