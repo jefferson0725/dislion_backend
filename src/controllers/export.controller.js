@@ -66,7 +66,7 @@ export const exportDataToFrontend = async (req, res) => {
         name: productData.name,
         description: productData.description,
         price: productData.price,
-        image: productData.image ? `/images/${path.basename(productData.image)}` : null,
+        image: productData.image ? path.basename(productData.image) : null,
         category: productData.category ? {
           id: productData.category.id,
           name: productData.category.name
@@ -144,7 +144,7 @@ export const getExportedData = async (req, res) => {
         name: productData.name,
         description: productData.description,
         price: productData.price,
-        image: productData.image ? `/images/${path.basename(productData.image)}` : null,
+        image: productData.image ? path.basename(productData.image) : null,
         category: productData.category ? {
           id: productData.category.id,
           name: productData.category.name
@@ -191,7 +191,7 @@ export const autoExport = async () => {
         name: productData.name,
         description: productData.description,
         price: productData.price,
-        image: productData.image ? `/images/${path.basename(productData.image)}` : null,
+        image: productData.image ? path.basename(productData.image) : null,
         category: productData.category ? {
           id: productData.category.id,
           name: productData.category.name
