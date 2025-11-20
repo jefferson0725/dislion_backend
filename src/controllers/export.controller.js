@@ -75,8 +75,9 @@ export const exportDataToFrontend = async (req, res) => {
       };
     });
 
-    // Create data object
+    // Create data object with version timestamp
     const exportData = {
+      version: new Date().getTime(), // Unix timestamp - changes every time
       lastUpdated: new Date().toISOString(),
       settings: settingsObj,
       categories,
@@ -153,6 +154,7 @@ export const getExportedData = async (req, res) => {
     });
 
     const exportData = {
+      version: new Date().getTime(), // Unix timestamp - changes every time
       lastUpdated: new Date().toISOString(),
       settings: settingsObj,
       categories,
@@ -199,6 +201,7 @@ export const autoExport = async () => {
     });
 
     const exportData = {
+      version: new Date().getTime(), // Unix timestamp - changes every time
       lastUpdated: new Date().toISOString(),
       categories,
       products: productsData
