@@ -1,0 +1,16 @@
+PORT=4000
+FRONTEND_URL=http://localhost:8080
+
+# Database
+DB_NAME=dislion_db
+DB_USER=jeff
+DB_PASS=admin320
+DB_HOST=148.230.88.10
+DB_PORT=5432
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_change_in_production_12345
+REFRESH_SECRET=your_super_secret_refresh_key_change_in_production_12345
+JWT_EXPIRES_IN=8h
+REFRESH_EXPIRES_IN=7d
+

@@ -1,4 +1,5 @@
 import { Settings } from "../src/models/index.js";
+import { sequelize } from "../src/config/db.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,25 +11,10 @@ dotenv.config();
 
 async function seed() {
   try {
-    console.log("Iniciando seed de datos iniciales...");
+    await sequelize.authenticate();
+    console.log("✓ Conexión a base de datos exitosa\n");
 
-    // Verificar si ya existen datos en Settings
-    const existingSettings = await Settings.count();
-    
-    if (existingSettings > 0) {
-      console.log("Ya existen configuraciones en la base de datos");
-      console.log("   Configuraciones existentes: " + existingSettings);
-      
-      // Preguntar si desea continuar (simplemente mostrar advertencia)
-      console.log("\nSi deseas reiniciar los datos:");
-      console.log("   1. Ejecuta: npm run migrate:undo");
-      console.log("   2. Ejecuta: npm run migrate");
-      console.log("   3. Ejecuta: npm run db:seed");
-      process.exit(0);
-    }
-
-    // Insertar configuraciones iniciales
-    console.log("\nInsertando configuraciones iniciales...");
+    console.log("Inicializando configuraciones...\n");
 
     const defaultSettings = [
       {
@@ -38,8 +24,13 @@ async function seed() {
       },
       {
         key: 'show_prices',
-        value: 'true',
+        value: 'false',
         description: 'Mostrar precios en el catálogo'
+      },
+      {
+        key: 'show_address',
+        value: 'false',
+        description: 'Mostrar dirección en el footer'
       },
       {
         key: 'store_name',
@@ -54,43 +45,45 @@ async function seed() {
       {
         key: 'contact_phone',
         value: '+57 300 757 1199',
-        description: 'Teléfono de contacto para el footer'
+        description: 'Teléfono de contacto'
       },
       {
         key: 'contact_email',
         value: 'contacto@dislion.com',
-        description: 'Email de contacto para el footer'
+        description: 'Email de contacto'
       },
       {
         key: 'contact_address',
         value: 'Calle 123 #45-67, Bogotá, Colombia',
-        description: 'Dirección física de la tienda'
-      },
-      {
-        key: 'show_address',
-        value: 'true',
-        description: 'Mostrar dirección en el footer'
+        description: 'Dirección física'
       }
     ];
 
+    let createdCount = 0;
+    let existingCount = 0;
+
     for (const setting of defaultSettings) {
-      await Settings.create(setting);
-      console.log(`  - Configuración '${setting.key}' creada`);
+      const [record, created] = await Settings.findOrCreate({
+        where: { key: setting.key },
+        defaults: setting,
+      });
+
+      if (created) {
+        console.log(`✓ Creada setting: ${setting.key}`);
+        createdCount++;
+      } else {
+        console.log(`  Setting existente: ${setting.key}`);
+        existingCount++;
+      }
     }
 
-    console.log("\nSeed completado exitosamente!");
-    console.log("\nConfiguraciones creadas:");
-    console.log("  - whatsapp_number: 573007571199");
-    console.log("  - show_prices: true");
-    console.log("  - store_name: DISLION");
-    console.log("  - currency: COP");
-    
-    console.log("\nPróximo paso:");
-    console.log("  Crear usuario administrador: npm run create-user");
+    console.log(`\n✓ Seed completado exitosamente!`);
+    console.log(`  Creadas: ${createdCount}`);
+    console.log(`  Existentes: ${existingCount}`);
 
     process.exit(0);
   } catch (error) {
-    console.error("\nError en el seed:");
+    console.error("\n✗ Error en el seed:");
     console.error(error);
     process.exit(1);
   }

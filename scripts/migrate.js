@@ -1,5 +1,5 @@
 import { sequelize } from "../src/config/db.js";
-import { User, Category, Product, RefreshToken, Settings } from "../src/models/index.js";
+import { User, Category, Product, RefreshToken, Settings, ProductSize } from "../src/models/index.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -31,6 +31,9 @@ async function migrate() {
 
     await Product.sync({ alter: true });
     console.log("  - Tabla 'products' sincronizada");
+
+    await ProductSize.sync({ alter: true });
+    console.log("  - Tabla 'product_sizes' sincronizada");
 
     await RefreshToken.sync({ alter: true });
     console.log("  - Tabla 'refresh_tokens' sincronizada");

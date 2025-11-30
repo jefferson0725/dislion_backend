@@ -1,5 +1,6 @@
 import { Product } from "../models/product.model.js";
 import { Category } from "../models/category.model.js";
+import { ProductSize } from "../models/productSize.model.js";
 import { Settings } from "../models/settings.model.js";
 import path from "path";
 import fs from "fs";
@@ -7,14 +8,14 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Get the correct frontend dist path (works in dev and production)
+// Get the correct frontend path (works in dev and production)
 function getFrontendDistPath() {
   // In production: /var/www/dislion/frontend/dist
-  // In development: ../frontend/dist or ../frontend/public
+  // In development: ../frontend/public (for Vite dev server)
   const possiblePaths = [
     "/var/www/dislion/frontend/dist", // Production
-    path.join(process.cwd(), "..", "frontend", "dist"), // Dev - relative to backend
-    path.join(process.cwd(), "..", "frontend", "public"), // Dev alternative
+    path.join(process.cwd(), "..", "frontend", "public"), // Dev - use public for Vite
+    path.join(process.cwd(), "..", "frontend", "dist"), // Dev fallback
   ];
   
   for (const p of possiblePaths) {
@@ -29,7 +30,7 @@ function getFrontendDistPath() {
   }
   
   // Fallback to relative path
-  const fallback = path.join(process.cwd(), "..", "frontend", "dist");
+  const fallback = path.join(process.cwd(), "..", "frontend", "public");
   console.log(`[Export] Using fallback path: ${fallback}`);
   return fallback;
 }
@@ -59,8 +60,16 @@ export const exportDataToFrontend = async (req, res) => {
     });
 
     // Transform products data
-    const productsData = products.map(product => {
+    const productsData = await Promise.all(products.map(async (product) => {
       const productData = product.toJSON();
+      
+      // Get sizes for this product
+      const sizes = await ProductSize.findAll({
+        where: { productId: product.id },
+        attributes: ['id', 'size', 'price', 'image'],
+        raw: true
+      });
+      
       return {
         id: productData.id,
         name: productData.name,
@@ -71,9 +80,15 @@ export const exportDataToFrontend = async (req, res) => {
           id: productData.category.id,
           name: productData.category.name
         } : null,
-        categoryId: productData.categoryId
+        categoryId: productData.categoryId,
+        sizes: sizes.map(s => ({
+          id: s.id,
+          size: s.size,
+          price: s.price,
+          image: s.image ? path.basename(s.image) : null
+        }))
       };
-    });
+    }));
 
     // Create data object with version timestamp
     const exportData = {
@@ -137,8 +152,16 @@ export const getExportedData = async (req, res) => {
       settingsObj[s.key] = s.value;
     });
 
-    const productsData = products.map(product => {
+    const productsData = await Promise.all(products.map(async (product) => {
       const productData = product.toJSON();
+      
+      // Get sizes for this product
+      const sizes = await ProductSize.findAll({
+        where: { productId: product.id },
+        attributes: ['id', 'size', 'price', 'image'],
+        raw: true
+      });
+      
       return {
         id: productData.id,
         name: productData.name,
@@ -149,9 +172,15 @@ export const getExportedData = async (req, res) => {
           id: productData.category.id,
           name: productData.category.name
         } : null,
-        categoryId: productData.categoryId
+        categoryId: productData.categoryId,
+        sizes: sizes.map(s => ({
+          id: s.id,
+          size: s.size,
+          price: s.price,
+          image: s.image ? path.basename(s.image) : null
+        }))
       };
-    });
+    }));
 
     const exportData = {
       version: new Date().getTime(), // Unix timestamp - changes every time
@@ -184,8 +213,16 @@ export const autoExport = async () => {
       }]
     });
 
-    const productsData = products.map(product => {
+    const productsData = await Promise.all(products.map(async (product) => {
       const productData = product.toJSON();
+      
+      // Get sizes for this product
+      const sizes = await ProductSize.findAll({
+        where: { productId: product.id },
+        attributes: ['id', 'size', 'price', 'image'],
+        raw: true
+      });
+      
       return {
         id: productData.id,
         name: productData.name,
@@ -196,9 +233,15 @@ export const autoExport = async () => {
           id: productData.category.id,
           name: productData.category.name
         } : null,
-        categoryId: productData.categoryId
+        categoryId: productData.categoryId,
+        sizes: sizes.map(s => ({
+          id: s.id,
+          size: s.size,
+          price: s.price,
+          image: s.image ? path.basename(s.image) : null
+        }))
       };
-    });
+    }));
 
     const exportData = {
       version: new Date().getTime(), // Unix timestamp - changes every time

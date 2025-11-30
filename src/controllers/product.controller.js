@@ -113,7 +113,7 @@ export const softDeleteProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const products = await Product.findAll({ 
-      include: ["category"],
+      include: ["category", "sizes"],
       order: [["displayOrder", "ASC"], ["id", "ASC"]]
     });
     res.json(products);
@@ -126,7 +126,7 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByPk(id, { include: ["category"] });
+    const product = await Product.findByPk(id, { include: ["category", "sizes"] });
     if (!product) return res.status(404).json({ error: "Product not found" });
     res.json(product);
   } catch (error) {

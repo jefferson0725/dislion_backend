@@ -8,7 +8,8 @@ export const getSetting = async (req, res) => {
     const setting = await Settings.findOne({ where: { key } });
     
     if (!setting) {
-      return res.status(404).json({ error: "Setting not found" });
+      // Return empty value instead of 404 - allows frontend to handle gracefully
+      return res.json({ key, value: null });
     }
     
     res.json(setting);

@@ -6,27 +6,30 @@ import auth from "../middlewares/auth.js";
 
 const router = express.Router();
 
-// Configure multer to save directly to frontend public/images
+// Helper to get the correct images directory
+const getImagesDir = () => {
+  const prodPath = "/var/www/dislion/front/public/images";
+  const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
+  
+  if (fs.existsSync("/var/www/dislion/front")) {
+    return prodPath; // Production
+  }
+  return devPath; // Development
+};
+
+// Configure multer to save to a temp location first
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Try production path first, then dev path
-    let frontImagesDir;
-    const prodPath = "/var/www/dislion/front/public/images";
-    const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
-    
-    if (fs.existsSync("/var/www/dislion/front")) {
-      frontImagesDir = prodPath; // Production
-    } else {
-      frontImagesDir = devPath; // Development
-    }
-    
+    const frontImagesDir = getImagesDir();
     // Create directory if it doesn't exist
     fs.mkdirSync(frontImagesDir, { recursive: true });
     cb(null, frontImagesDir);
   },
   filename: (req, file, cb) => {
-    // The filename will be set from the request, handled in the route
-    cb(null, file.originalname); // Temporary, will be renamed
+    // Generate a temporary unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `temp-${uniqueSuffix}${ext}`);
   },
 });
 
@@ -51,20 +54,15 @@ router.post("/", auth(), upload.single("image"), (req, res) => {
       return res.status(400).json({ error: "No se proporcionó ningún archivo" });
     }
     
-    // Determine the correct images directory
-    let frontImagesDir;
-    if (fs.existsSync("/var/www/dislion/front")) {
-      frontImagesDir = "/var/www/dislion/front/public/images"; // Production
-    } else {
-      frontImagesDir = path.join(process.cwd(), "..", "frontend", "public", "images"); // Development
-    }
-    
+    const frontImagesDir = getImagesDir();
     const tempPath = path.join(frontImagesDir, req.file.filename);
     
     // Get the desired filename from request body
     const desiredFilename = req.body.filename;
     
-    if (desiredFilename && desiredFilename !== req.file.filename) {
+    console.log("Upload request - temp file:", req.file.filename, "desired:", desiredFilename);
+    
+    if (desiredFilename) {
       // Rename the file to the desired name
       const newPath = path.join(frontImagesDir, desiredFilename);
       
@@ -76,6 +74,8 @@ router.post("/", auth(), upload.single("image"), (req, res) => {
       // Rename the uploaded file
       fs.renameSync(tempPath, newPath);
       
+      console.log("File renamed to:", desiredFilename);
+      
       // Return the desired filename
       return res.json({ 
         filename: desiredFilename,
@@ -83,7 +83,8 @@ router.post("/", auth(), upload.single("image"), (req, res) => {
       });
     }
     
-    // Return just the filename (not the full path)
+    // If no desired filename, keep the temp name
+    console.log("No desired filename, keeping:", req.file.filename);
     res.json({ 
       filename: req.file.filename,
       message: "Imagen guardada en el frontend exitosamente" 
