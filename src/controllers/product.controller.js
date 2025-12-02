@@ -1,6 +1,13 @@
 import { Product } from "../models/product.model.js";
 import { Category } from "../models/category.model.js";
+import { ProductSize } from "../models/productSize.model.js";
 import { autoExport } from "./export.controller.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create product
 export const createProduct = async (req, res) => {
@@ -71,7 +78,21 @@ export const updateProduct = async (req, res) => {
       product.price = priceNum;
     }
 
-    if (image !== undefined) product.image = image;
+    if (image !== undefined) {
+      // Si hay una imagen nueva y existe una imagen antigua, eliminar la antigua
+      if (image && product.image && image !== product.image) {
+        const oldImagePath = path.join(__dirname, "../../..", "frontend", "public", "images", product.image);
+        if (fs.existsSync(oldImagePath)) {
+          try {
+            fs.unlinkSync(oldImagePath);
+            console.log(`Imagen antigua del producto eliminada: ${product.image}`);
+          } catch (err) {
+            console.error(`Error al eliminar imagen antigua: ${err.message}`);
+          }
+        }
+      }
+      product.image = image;
+    }
     
     if (displayOrder !== undefined) {
       const orderNum = Number(displayOrder);
@@ -95,8 +116,38 @@ export const updateProduct = async (req, res) => {
 export const softDeleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByPk(id);
+    const product = await Product.findByPk(id, { include: ["sizes"] });
     if (!product) return res.status(404).json({ error: "Product not found" });
+
+    // Eliminar imagen principal del producto si existe
+    if (product.image) {
+      const imagePath = path.join(__dirname, "../../..", "frontend", "public", "images", product.image);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+          console.log(`Imagen del producto eliminada: ${product.image}`);
+        } catch (err) {
+          console.error(`Error al eliminar imagen del producto: ${err.message}`);
+        }
+      }
+    }
+
+    // Eliminar imágenes de los tamaños si existen
+    if (product.sizes && product.sizes.length > 0) {
+      for (const size of product.sizes) {
+        if (size.image) {
+          const sizeImagePath = path.join(__dirname, "../../..", "frontend", "public", "images", size.image);
+          if (fs.existsSync(sizeImagePath)) {
+            try {
+              fs.unlinkSync(sizeImagePath);
+              console.log(`Imagen del tamaño eliminada: ${size.image}`);
+            } catch (err) {
+              console.error(`Error al eliminar imagen del tamaño: ${err.message}`);
+            }
+          }
+        }
+      }
+    }
 
     await product.destroy();
     
