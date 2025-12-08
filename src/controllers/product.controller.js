@@ -9,6 +9,14 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper to get the correct images directory
+const getImagesDir = () => {
+  if (process.env.UPLOADS_PATH) {
+    return process.env.UPLOADS_PATH;
+  }
+  return path.join(__dirname, "../../..", "frontend", "public", "images");
+};
+
 // Create product
 export const createProduct = async (req, res) => {
   try {
@@ -81,7 +89,7 @@ export const updateProduct = async (req, res) => {
     if (image !== undefined) {
       // Si hay una imagen nueva y existe una imagen antigua, eliminar la antigua
       if (image && product.image && image !== product.image) {
-        const oldImagePath = path.join(__dirname, "../../..", "frontend", "public", "images", product.image);
+        const oldImagePath = path.join(getImagesDir(), product.image);
         if (fs.existsSync(oldImagePath)) {
           try {
             fs.unlinkSync(oldImagePath);
@@ -121,7 +129,7 @@ export const softDeleteProduct = async (req, res) => {
 
     // Eliminar imagen principal del producto si existe
     if (product.image) {
-      const imagePath = path.join(__dirname, "../../..", "frontend", "public", "images", product.image);
+      const imagePath = path.join(getImagesDir(), product.image);
       if (fs.existsSync(imagePath)) {
         try {
           fs.unlinkSync(imagePath);
@@ -136,7 +144,7 @@ export const softDeleteProduct = async (req, res) => {
     if (product.sizes && product.sizes.length > 0) {
       for (const size of product.sizes) {
         if (size.image) {
-          const sizeImagePath = path.join(__dirname, "../../..", "frontend", "public", "images", size.image);
+          const sizeImagePath = path.join(getImagesDir(), size.image);
           if (fs.existsSync(sizeImagePath)) {
             try {
               fs.unlinkSync(sizeImagePath);
