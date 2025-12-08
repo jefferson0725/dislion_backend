@@ -8,13 +8,14 @@ const router = express.Router();
 
 // Helper to get the correct images directory
 const getImagesDir = () => {
-  const prodPath = "/var/www/dislion/front/public/images";
-  const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
-  
-  if (fs.existsSync("/var/www/dislion/front")) {
-    return prodPath; // Production
+  // Use environment variable if set, otherwise use defaults
+  if (process.env.UPLOADS_PATH) {
+    return process.env.UPLOADS_PATH;
   }
-  return devPath; // Development
+  
+  // Default paths
+  const devPath = path.join(process.cwd(), "..", "frontend", "public", "images");
+  return devPath;
 };
 
 // Configure multer to save to a temp location first
