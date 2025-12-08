@@ -4,10 +4,14 @@ import { autoExport } from "./export.controller.js";
 import { sequelize } from "../config/db.js";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Helper to get the correct images directory
+const getImagesDir = () => {
+  if (process.env.UPLOADS_PATH) {
+    return process.env.UPLOADS_PATH;
+  }
+  return path.join(process.cwd(), "..", "frontend", "public", "images");
+};
 
 // Get all unique sizes in the system
 export const getUniqueSizes = async (req, res) => {
@@ -122,7 +126,7 @@ export const updateProductSize = async (req, res) => {
     if (image !== undefined) {
       // Si hay una imagen nueva y existe una imagen antigua, eliminar la antigua
       if (image && productSize.image && image !== productSize.image) {
-        const oldImagePath = path.join(__dirname, "../../..", "frontend", "public", "images", productSize.image);
+        const oldImagePath = path.join(getImagesDir(), productSize.image);
         if (fs.existsSync(oldImagePath)) {
           try {
             fs.unlinkSync(oldImagePath);
@@ -154,7 +158,7 @@ export const deleteProductSize = async (req, res) => {
 
     // Eliminar imagen del tamaño si existe
     if (productSize.image) {
-      const imagePath = path.join(__dirname, "../../..", "frontend", "public", "images", productSize.image);
+      const imagePath = path.join(getImagesDir(), productSize.image);
       if (fs.existsSync(imagePath)) {
         try {
           fs.unlinkSync(imagePath);
