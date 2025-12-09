@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import sharp from "sharp";
 import auth from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -18,81 +19,96 @@ const getImagesDir = () => {
   return devPath;
 };
 
-// Configure multer to save to a temp location first
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const frontImagesDir = getImagesDir();
-    // Create directory if it doesn't exist
-    fs.mkdirSync(frontImagesDir, { recursive: true });
-    cb(null, frontImagesDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate a temporary unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `temp-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer to save to memory for processing
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
+    const mimetype = /image\/(jpeg|jpg|png|gif|webp|heic|heif)/.test(file.mimetype);
+    if (mimetype || extname) {
       return cb(null, true);
     }
-    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp, heic)"));
   },
 });
 
-// POST /api/uploads/frontend - Save image directly to frontend
-router.post("/", auth(), upload.single("image"), (req, res) => {
+// Image optimization settings
+const WEBP_QUALITY = 80; // Quality 0-100 (80 is good balance)
+const MAX_WIDTH = 1200;  // Max width in pixels
+const MAX_HEIGHT = 1200; // Max height in pixels
+
+// POST /api/uploads/frontend - Save image directly to frontend (optimized as WebP)
+router.post("/", auth(), upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No se proporcionó ningún archivo" });
     }
     
     const frontImagesDir = getImagesDir();
-    const tempPath = path.join(frontImagesDir, req.file.filename);
     
-    // Get the desired filename from request body
-    const desiredFilename = req.body.filename;
+    // Create directory if it doesn't exist
+    fs.mkdirSync(frontImagesDir, { recursive: true });
     
-    console.log("Upload request - temp file:", req.file.filename, "desired:", desiredFilename);
+    // Get the desired filename from request body and change extension to .webp
+    let desiredFilename = req.body.filename;
     
     if (desiredFilename) {
-      // Rename the file to the desired name
-      const newPath = path.join(frontImagesDir, desiredFilename);
-      
-      // Delete the file if it already exists
-      if (fs.existsSync(newPath)) {
-        fs.unlinkSync(newPath);
-      }
-      
-      // Rename the uploaded file
-      fs.renameSync(tempPath, newPath);
-      
-      console.log("File renamed to:", desiredFilename);
-      
-      // Return the desired filename
-      return res.json({ 
-        filename: desiredFilename,
-        message: "Imagen guardada en el frontend exitosamente" 
-      });
+      // Replace extension with .webp
+      const nameWithoutExt = desiredFilename.replace(/\.[^.]+$/, '');
+      desiredFilename = `${nameWithoutExt}.webp`;
+    } else {
+      // Generate a unique filename
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      desiredFilename = `image-${uniqueSuffix}.webp`;
     }
     
-    // If no desired filename, keep the temp name
-    console.log("No desired filename, keeping:", req.file.filename);
-    res.json({ 
-      filename: req.file.filename,
-      message: "Imagen guardada en el frontend exitosamente" 
+    const outputPath = path.join(frontImagesDir, desiredFilename);
+    
+    console.log("Processing image:", req.file.originalname, "-> ", desiredFilename);
+    
+    // Get original file size
+    const originalSize = req.file.buffer.length;
+    
+    // Process and optimize image with Sharp
+    const processedImage = await sharp(req.file.buffer)
+      .resize(MAX_WIDTH, MAX_HEIGHT, {
+        fit: 'inside',           // Maintain aspect ratio, fit within bounds
+        withoutEnlargement: true // Don't upscale smaller images
+      })
+      .webp({ 
+        quality: WEBP_QUALITY,
+        effort: 4  // Compression effort 0-6 (higher = smaller file, slower)
+      })
+      .toBuffer();
+    
+    // Delete the file if it already exists
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+    
+    // Write the optimized image
+    fs.writeFileSync(outputPath, processedImage);
+    
+    const newSize = processedImage.length;
+    const savings = Math.round((1 - newSize / originalSize) * 100);
+    
+    console.log(`Image optimized: ${originalSize} bytes -> ${newSize} bytes (${savings}% smaller)`);
+    
+    return res.json({ 
+      filename: desiredFilename,
+      originalSize,
+      optimizedSize: newSize,
+      savings: `${savings}%`,
+      message: "Imagen optimizada y guardada exitosamente" 
     });
+    
   } catch (err) {
-    console.error("Error uploading to frontend:", err);
-    res.status(500).json({ error: err.message || "Error al guardar la imagen" });
+    console.error("Error processing image:", err);
+    res.status(500).json({ error: err.message || "Error al procesar la imagen" });
   }
 });
 
