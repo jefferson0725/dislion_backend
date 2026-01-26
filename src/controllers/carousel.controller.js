@@ -74,7 +74,8 @@ export const uploadCarouselImage = async (req, res) => {
         .status(400)
         .json({ error: "No se proporcionó ninguna imagen" });
     }
-    sourcePath = req.file.path;
+
+    const sourcePath = req.file.path;
     const carouselDir = getCarouselDir();
 
     // Generate unique filename with .webp extension
