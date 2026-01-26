@@ -1,9 +1,14 @@
 import jwt from "jsonwebtoken";
 
 // auth middleware factory: auth(requiredRole?)
-export default function auth(requiredRole = "admin") {
+export default function auth(requiredRole) {
   return (req, res, next) => {
     const authHeader = req.headers.authorization || req.headers.Authorization;
+    console.log(
+      "[Auth] Headers:",
+      req.headers.authorization ? "present" : "missing",
+    );
+
     if (!authHeader)
       return res.status(401).json({ error: "No token provided" });
 
@@ -17,13 +22,20 @@ export default function auth(requiredRole = "admin") {
     try {
       const payload = jwt.verify(token, secret);
       req.user = payload;
+      console.log("[Auth] User:", payload.username, "Role:", payload.role);
 
-      if (requiredRole && payload.role !== requiredRole) {
+      // Solo verificar rol si se especificó uno
+      if (
+        requiredRole !== undefined &&
+        requiredRole !== null &&
+        payload.role !== requiredRole
+      ) {
         return res.status(403).json({ error: "Insufficient role" });
       }
 
       next();
     } catch (err) {
+      console.log("[Auth] Token verification failed:", err.message);
       return res.status(401).json({ error: "Invalid or expired token" });
     }
   };

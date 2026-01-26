@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,8 +25,10 @@ const getCarouselDir = () => {
 
 // Helper to get data.json path
 const getDataFilePath = () => {
-  if (process.env.UPLOADS_PATH) {
-    return path.join(path.dirname(process.env.UPLOADS_PATH), "data.json");
+  // En producción, data.json está en /var/www/dislion/frontend/dist
+  // En desarrollo, está en frontend/public
+  if (process.env.NODE_ENV === "production" || process.env.UPLOADS_PATH) {
+    return "/var/www/dislion/frontend/dist/data.json";
   }
   return path.join(__dirname, "../../..", "frontend", "public", "data.json");
 };
@@ -71,21 +74,39 @@ export const uploadCarouselImage = async (req, res) => {
         .status(400)
         .json({ error: "No se proporcionó ninguna imagen" });
     }
-
-    const filename = req.file.filename;
-    const sourcePath = req.file.path;
+    sourcePath = req.file.path;
     const carouselDir = getCarouselDir();
-    const destPath = path.join(carouselDir, filename);
 
-    // Move file to carousel directory
-    await fs.rename(sourcePath, destPath);
+    // Generate unique filename with .webp extension
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const webpFilename = `carousel-${uniqueSuffix}.webp`;
+    const destPath = path.join(carouselDir, webpFilename);
+
+    // Convert image to WebP format
+    await sharp(sourcePath)
+      .webp({ quality: 85 }) // 85% quality for good balance between size and quality
+      .toFile(destPath);
+
+    // Delete original uploaded file
+    await fs.unlink(sourcePath);
 
     res.json({
       success: true,
-      filename,
-      url: `/images/carousel/${filename}`,
+      filename: webpFilename,
+      url: `/images/carousel/${webpFilename}`,
     });
   } catch (err) {
+    console.error("Error uploading carousel image:", err);
+
+    // Try to cleanup uploaded file on error
+    try {
+      if (req.file?.path) {
+        await fs.unlink(req.file.path);
+      }
+    } catch (cleanupErr) {
+      console.error("Error cleaning up file:", cleanupErr);
+    }
+
     console.error("Error uploading carousel image:", err);
     res.status(500).json({ error: "Error al subir la imagen" });
   }
