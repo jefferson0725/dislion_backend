@@ -16,16 +16,16 @@ router.get("/", getCarouselImages);
 // Upload carousel image (admin only)
 router.post(
   "/upload",
-  auth(),
-  isAdmin,
+  auth(null), // Solo autenticar, no verificar rol aquí
+  isAdmin, // Verificar rol de admin
   upload.single("image"),
   uploadCarouselImage,
 );
 
 // Delete carousel image (admin only)
-router.delete("/:filename", auth(), isAdmin, deleteCarouselImage);
+router.delete("/:filename", auth(null), isAdmin, deleteCarouselImage);
 
 // Update carousel settings (admin only)
-router.put("/settings", auth(), isAdmin, updateCarouselSettings);
+router.put("/settings", auth(null), isAdmin, updateCarouselSettings);
 
 export default router;
