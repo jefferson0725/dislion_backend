@@ -13,7 +13,7 @@ async function createInitialData() {
     // Determinar la ruta según el entorno
     const isProd = process.env.UPLOADS_PATH;
     const dataFilePath = isProd
-      ? path.join(path.dirname(process.env.UPLOADS_PATH), "data.json")
+      ? "/var/www/dislion/frontend/dist/data.json"
       : path.join(__dirname, "../../frontend/public/data.json");
 
     // Verificar si ya existe
