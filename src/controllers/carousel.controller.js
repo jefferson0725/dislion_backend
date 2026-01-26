@@ -43,6 +43,8 @@ async function ensureCarouselDir() {
 // Get all carousel images
 export const getCarouselImages = async (req, res) => {
   try {
+    await ensureCarouselDir();
+
     const carouselDir = getCarouselDir();
     const files = await fs.readdir(carouselDir);
     const images = files
@@ -112,8 +114,21 @@ export const updateCarouselSettings = async (req, res) => {
 
     // Read current data
     const dataFile = getDataFilePath();
-    const data = await fs.readFile(dataFile, "utf-8");
-    const jsonData = JSON.parse(data);
+
+    // Ensure directory exists
+    const dataDir = path.dirname(dataFile);
+    await fs.mkdir(dataDir, { recursive: true });
+
+    let jsonData = {};
+
+    // Try to read existing data
+    try {
+      const data = await fs.readFile(dataFile, "utf-8");
+      jsonData = JSON.parse(data);
+    } catch (err) {
+      // File doesn't exist, start with empty object
+      console.log("[Carousel] Creating new data.json file");
+    }
 
     // Update settings
     if (!jsonData.settings) {
